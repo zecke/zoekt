@@ -61,22 +61,14 @@ jobs:
     steps:
       - name: foo
         if: contains(github.ref, 'test-tags')
-        env:
-          tags_test_1: "foo"
-        run: echo "setting foo"
+        run: echo ::set-env name=STEPVAR::foo
       - name: bar
-        env:
-          tags_test_2: "bar"
-        run: echo "setting bar"
-      - name: all
-        env:
-          final: ${{ env.tags_***}}
-        run: echo "concat"
+        run: echo ::set-env name=STEPVAR::${{env.STEPVAR}},bar
   read-tags:
     runs-on: ubuntu-latest
     steps:
       - name: read-env
-        run: echo $foo", "$bar", "$final
+        run: echo $STEPVAR
 
 
 
