@@ -58,6 +58,8 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
   tags:
     runs-on: ubuntu-latest
+    env:
+      label: ""
     steps:
       - name: foo
         env:
