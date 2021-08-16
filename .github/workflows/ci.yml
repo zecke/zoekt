@@ -61,17 +61,11 @@ jobs:
     steps:
       - name: foo
         env:
-          label: foo
-        run: echo "setting foo"
+          label: "foo"
       - name: bar
         env:
-          label: ${{env.label}},bar
-        run: echo "setting bar"
-  read-tags:
-    needs: tags
-    runs-on: ubuntu-latest
-    steps:
-      - name: read-env
+          label: {{env.label}}",bar"
+      - name: read-tags
         run: echo "${{env.label}}"
 
 
