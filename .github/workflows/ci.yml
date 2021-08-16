@@ -62,15 +62,15 @@ jobs:
       - name: foo
         if: contains(github.ref, 'test-tags')
         env:
-          tagstest_1: "foo"
+          tags_test_1: "foo"
         run: echo "setting foo"
       - name: bar
         env:
-          tagstest_2: "bar"
+          tags_test_2: "bar"
         run: echo "setting bar"
       - name: all
         env:
-          final: ${{ env.tags_** }}
+          final: ${{ env.tags_*** }}
         run: echo "concat"
   read-tags:
     runs-on: ubuntu-latest
