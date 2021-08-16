@@ -57,20 +57,23 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
   tags:
-    if: contains(github.ref, 'test-tags')
     runs-on: ubuntu-latest
-    env:
-      tagstest_1: "foo"
-  tags_2:
-    needs: tags
+    steps:
+      - name: foo
+        if: contains(github.ref, 'test-tags')
+        env:
+          tagstest_1: "foo"
+      - name: bar
+        env:
+          tagstest_2: "var"
+      - name: all
+        env:
+          final: ${{ env.tags_** }}
+  read-tags:
     runs-on: ubuntu-latest
-    env:
-      tagstest_2: "var"
-  tags_3:
-    needs: tags_2
-    runs-on: ubuntu-latest
-    env:
-      final: ${{ env.tags_** }}
+    steps:
+      - name: read-env
+      - run: "echo $foo, $bar, $final"
 
 
 
