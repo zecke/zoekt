@@ -64,7 +64,7 @@ jobs:
           label: "foo"
       - name: bar
         env:
-          label: {{env.label}}",bar"
+          label: ${{env.label}}",bar"
       - name: read-tags
         run: echo "${{env.label}}"
 
