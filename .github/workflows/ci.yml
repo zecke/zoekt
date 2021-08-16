@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: read-env
-        run: echo $env.label
+        run: echo "${{env.label}}"
 
 
 
