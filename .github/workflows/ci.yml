@@ -60,15 +60,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: foo
-        if: contains(github.ref, 'test-tags')
-        run: echo ::set-env name=STEPVAR::foo
+        env:
+          label: foo
+        run: echo "setting foo"
       - name: bar
-        run: echo ::set-env name=STEPVAR::${{env.STEPVAR}},bar
+        env:
+          label: ${{env.label}},bar
+        run: echo "setting bar"
   read-tags:
+    needs: tags
     runs-on: ubuntu-latest
     steps:
       - name: read-env
-        run: echo $STEPVAR
+        run: echo $env.label
 
 
 
