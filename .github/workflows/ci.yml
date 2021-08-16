@@ -70,7 +70,7 @@ jobs:
         run: echo "setting bar"
       - name: all
         env:
-          final: ${{ env.tags_*** }}
+          final: ${{ env.tags_***}}
         run: echo "concat"
   read-tags:
     runs-on: ubuntu-latest
