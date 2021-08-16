@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: read-env
-      - run: echo $foo", "$bar", "$final
+        run: echo $foo", "$bar", "$final
 
 
 
