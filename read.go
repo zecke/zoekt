@@ -19,7 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sort"
+	"path"
+	"sync/atomic"
 )
 
 // IndexFile is a file suitable for concurrent read access. For performance
@@ -147,60 +148,18 @@ func canReadVersion(md *IndexMetadata) bool {
 	return md.IndexFormatVersion == IndexFormatVersion || md.IndexFormatVersion == NextIndexFormatVersion
 }
 
+var NgramAsciiBytes int64
+var NgramUnicodeBytes int64
+
 func (r *reader) readIndexData(toc *indexTOC) (*indexData, error) {
 	d := indexData{
-		file:           r.r,
-		fileNameNgrams: map[ngram][]byte{},
-		branchIDs:      []map[string]uint{},
-		branchNames:    []map[uint]string{},
+		file: r.r,
 	}
 
-	repos, md, err := r.readMetadata(toc)
+	_, md, err := r.readMetadata(toc)
 	if md != nil && !canReadVersion(md) {
 		return nil, fmt.Errorf("file is v%d, want v%d", md.IndexFormatVersion, IndexFormatVersion)
 	} else if err != nil {
-		return nil, err
-	}
-
-	d.metaData = *md
-	d.repoMetaData = make([]Repository, 0, len(repos))
-	for _, r := range repos {
-		d.repoMetaData = append(d.repoMetaData, *r)
-	}
-
-	d.boundariesStart = toc.fileContents.data.off
-	d.boundaries = toc.fileContents.relativeIndex()
-	d.newlinesStart = toc.newlines.data.off
-	d.newlinesIndex = toc.newlines.relativeIndex()
-	d.docSectionsStart = toc.fileSections.data.off
-	d.docSectionsIndex = toc.fileSections.relativeIndex()
-
-	d.symbols.symKindIndex = toc.symbolKindMap.relativeIndex()
-	d.fileEndSymbol, err = readSectionU32(d.file, toc.fileEndSymbol)
-	if err != nil {
-		return nil, err
-	}
-
-	// Call readSectionBlob on each section key, and store the result in
-	// the blob value.
-	for sect, blob := range map[simpleSection]*[]byte{
-		toc.symbolMap.index:    &d.symbols.symIndex,
-		toc.symbolMap.data:     &d.symbols.symContent,
-		toc.symbolKindMap.data: &d.symbols.symKindContent,
-		toc.symbolMetaData:     &d.symbols.symMetaData,
-	} {
-		if *blob, err = d.readSectionBlob(sect); err != nil {
-			return nil, err
-		}
-	}
-
-	d.checksums, err = d.readSectionBlob(toc.contentChecksums)
-	if err != nil {
-		return nil, err
-	}
-
-	d.languages, err = d.readSectionBlob(toc.languages)
-	if err != nil {
 		return nil, err
 	}
 
@@ -208,100 +167,12 @@ func (r *reader) readIndexData(toc *indexTOC) (*indexData, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	d.fileBranchMasks, err = readSectionU64(d.file, toc.branchMasks)
-	if err != nil {
-		return nil, err
+	atomic.AddInt64(&NgramAsciiBytes, int64(4*len(d.ngrams.asc.entries)+4*cap(d.ngrams.asc.chunkOffsets)))
+	atomic.AddInt64(&NgramUnicodeBytes, int64(4*len(d.ngrams.uni.offsets)+4*cap(d.ngrams.uni.bots)+4*cap(d.ngrams.uni.tops)))
+	if len(d.ngrams.asc.entries) > 2e5 || len(d.ngrams.uni.offsets) > 2e5 {
+		fmt.Println(len(d.ngrams.uni.offsets), len(d.ngrams.asc.entries), path.Base(r.r.Name()))
 	}
-
-	d.fileNameContent, err = d.readSectionBlob(toc.fileNames.data)
-	if err != nil {
-		return nil, err
-	}
-
-	d.fileNameIndex = toc.fileNames.relativeIndex()
-
-	d.fileNameNgrams, err = d.readFileNameNgrams(toc)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, md := range d.repoMetaData {
-		repoBranchIDs := make(map[string]uint, len(md.Branches))
-		repoBranchNames := make(map[uint]string, len(md.Branches))
-		for j, br := range md.Branches {
-			id := uint(1) << uint(j)
-			repoBranchIDs[br.Name] = id
-			repoBranchNames[id] = br.Name
-		}
-		d.branchIDs = append(d.branchIDs, repoBranchIDs)
-		d.branchNames = append(d.branchNames, repoBranchNames)
-		d.rawConfigMasks = append(d.rawConfigMasks, encodeRawConfig(md.RawConfig))
-	}
-
-	d.repoTombstone = make([]bool, len(d.repoMetaData))
-
-	blob, err := d.readSectionBlob(toc.runeDocSections)
-	if err != nil {
-		return nil, err
-	}
-	d.runeDocSections = blob
-
-	var runeOffsets, fileNameRuneOffsets []uint32
-
-	for sect, dest := range map[simpleSection]*[]uint32{
-		toc.subRepos:        &d.subRepos,
-		toc.runeOffsets:     &runeOffsets,
-		toc.nameRuneOffsets: &fileNameRuneOffsets,
-		toc.nameEndRunes:    &d.fileNameEndRunes,
-		toc.fileEndRunes:    &d.fileEndRunes,
-	} {
-		if blob, err := d.readSectionBlob(sect); err != nil {
-			return nil, err
-		} else {
-			*dest = fromSizedDeltas(blob, nil)
-		}
-	}
-
-	d.runeOffsets = makeRuneOffsetMap(runeOffsets)
-	d.fileNameRuneOffsets = makeRuneOffsetMap(fileNameRuneOffsets)
-
-	d.subRepoPaths = make([][]string, 0, len(d.repoMetaData))
-	for i := 0; i < len(d.repoMetaData); i++ {
-		keys := make([]string, 0, len(d.repoMetaData[i].SubRepoMap)+1)
-		keys = append(keys, "")
-		for k := range d.repoMetaData[i].SubRepoMap {
-			if k != "" {
-				keys = append(keys, k)
-			}
-		}
-		sort.Strings(keys)
-		d.subRepoPaths = append(d.subRepoPaths, keys)
-	}
-
-	d.languageMap = map[byte]string{}
-	for k, v := range d.metaData.LanguageMap {
-		d.languageMap[v] = k
-	}
-
-	if err := d.verify(); err != nil {
-		return nil, err
-	}
-
-	if d.metaData.IndexFormatVersion >= 17 {
-		blob, err := d.readSectionBlob(toc.repos)
-		if err != nil {
-			return nil, err
-		}
-		d.repos = fromSizedDeltas16(blob, nil)
-	} else {
-		// every document is for repo index 0 (default value of uint16)
-		d.repos = make([]uint16, len(d.fileBranchMasks))
-	}
-
-	if err := d.calculateStats(); err != nil {
-		return nil, err
-	}
+	d.ngrams = combinedNgramOffset{}
 
 	return &d, nil
 }

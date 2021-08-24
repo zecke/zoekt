@@ -30,6 +30,7 @@ import (
 	"runtime/pprof"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/zoekt"
@@ -184,6 +185,8 @@ func testLoadIndexDir(indexDir string) {
 	runtime.GC()
 	runtime.ReadMemStats(&b)
 	log.Printf("%s loaded in %d ms, additional memory consumption: %d MiB", s.String(), duration.Milliseconds(), (b.Alloc-a.Alloc)/1024/1024)
+	log.Printf("ASCII Ngram Size: %d MiB", atomic.LoadInt64(&zoekt.NgramAsciiBytes)/1024/1024)
+	log.Printf("Unicode Ngram Size: %d MiB", atomic.LoadInt64(&zoekt.NgramUnicodeBytes)/1024/1024)
 
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
@@ -200,7 +203,7 @@ func testLoadIndexDir(indexDir string) {
 
 func main() {
 	repo := flag.String("repo", "", "repository to search")
-	indexDir := flag.String("indexDir", "", "indexDir to load and exit")
+	indexDir := flag.String("indexDir", "", "indexDir to scan for large trigrams")
 	caseSensitive := flag.Bool("case", false, "case sensitive")
 
 	flag.Parse()
@@ -216,7 +219,6 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
-
 	if *indexDir != "" {
 		testLoadIndexDir(*indexDir)
 		return
