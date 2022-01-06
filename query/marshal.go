@@ -8,7 +8,7 @@ import (
 	"io"
 	"unsafe"
 
-	"github.com/RoaringBitmap/roaring"
+	roaring "github.com/dgraph-io/sroar"
 )
 
 // We implement a custom binary marshaller for a list of repos to
@@ -173,7 +173,7 @@ func branchesReposEncode(brs []BranchRepos) ([]byte, error) {
 	size += uint64(binary.PutUvarint(enc[:], uint64(len(brs))))
 	for _, br := range brs {
 		size += strSize(br.Branch)
-		idsSize := br.Repos.GetSerializedSizeInBytes()
+		idsSize := uint64(len(br.Repos.ToBuffer()))
 		size += uint64(binary.PutUvarint(enc[:], idsSize))
 		size += idsSize
 	}
@@ -188,10 +188,11 @@ func branchesReposEncode(brs []BranchRepos) ([]byte, error) {
 
 	for _, br := range brs {
 		str(br.Branch)
-		l := br.Repos.GetSerializedSizeInBytes()
+		buf := br.Repos.ToBuffer()
+		l := uint64(len(buf))
 		varint(l)
 
-		n, err := br.Repos.WriteTo(&b)
+		n, err := b.Write(buf)
 		if err != nil {
 			return nil, err
 		}
@@ -260,8 +261,7 @@ func (b *binaryReader) bitmap() *roaring.Bitmap {
 		b.err = errors.New("malformed BranchRepos")
 		return nil
 	}
-	r := roaring.New()
-	_, b.err = r.FromBuffer(b.b[:l])
+	r := roaring.FromBuffer(b.b[:l])
 	b.b = b.b[l:]
 	return r
 }

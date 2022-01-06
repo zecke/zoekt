@@ -28,7 +28,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/RoaringBitmap/roaring"
+	roaring "github.com/dgraph-io/sroar"
 )
 
 var _ = log.Println
@@ -208,9 +208,10 @@ type BranchesRepos struct {
 
 // NewSingleBranchesRepos is a helper for creating a BranchesRepos which
 // searches a single branch.
-func NewSingleBranchesRepos(branch string, ids ...uint32) *BranchesRepos {
+func NewSingleBranchesRepos(branch string, ids ...uint64) *BranchesRepos {
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
 	return &BranchesRepos{List: []BranchRepos{
-		{branch, roaring.BitmapOf(ids...)},
+		{branch, roaring.FromSortedList(ids)},
 	}}
 }
 
@@ -220,8 +221,8 @@ func (q *BranchesRepos) String() string {
 	sb.WriteString("(branchesrepos")
 
 	for _, br := range q.List {
-		if size := br.Repos.GetCardinality(); size > 1 {
-			sb.WriteString(" " + br.Branch + ":" + strconv.FormatUint(size, 10))
+		if size := len(br.Repos.ToBuffer()); size > 1 {
+			sb.WriteString(" " + br.Branch + ":" + strconv.FormatInt(int64(size), 10))
 		} else {
 			sb.WriteString(" " + br.Branch + "=" + br.Repos.String())
 		}

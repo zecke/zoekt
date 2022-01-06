@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/RoaringBitmap/roaring"
+	roaring "github.com/dgraph-io/sroar"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -131,7 +131,7 @@ func TestBranchesRepos_Marshal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tr := cmp.Transformer("", func(b *roaring.Bitmap) []uint32 { return b.ToArray() })
+	tr := cmp.Transformer("", func(b *roaring.Bitmap) []uint64 { return b.ToArray() })
 	if diff := cmp.Diff(want, &got, tr); diff != "" {
 		t.Fatalf("mismatch IDs (-want +got):\n%s", diff)
 	}
@@ -186,23 +186,22 @@ func genBranchesRepos(n int) *BranchesRepos {
 
 	set := genRepoBranches(n).Set
 	br := map[string]*roaring.Bitmap{}
-	id := uint32(1)
+	id := uint64(1)
 
 	for _, branches := range set {
 		for _, branch := range branches {
 			ids, ok := br[branch]
 			if !ok {
-				ids = roaring.New()
+				ids = roaring.NewBitmap()
 				br[branch] = ids
 			}
-			ids.Add(id)
+			ids.Set(id)
 		}
 		id++
 	}
 
 	brs := make([]BranchRepos, 0, len(br))
 	for branch, ids := range br {
-		ids.RunOptimize()
 		brs = append(brs, BranchRepos{Branch: branch, Repos: ids})
 	}
 
