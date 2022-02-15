@@ -94,6 +94,9 @@ type Options struct {
 	// regardless of their size. The full pattern syntax is here:
 	// https://github.com/bmatcuk/doublestar/tree/v1#patterns.
 	LargeFiles []string
+
+	// Set time stamp of shard to Epoch seconds.
+	Epoch int64
 }
 
 // HashOptions creates a hash of the options that affect an index.
@@ -142,6 +145,7 @@ func (o *Options) Flags(fs *flag.FlagSet) {
 
 	// Sourcegraph specific
 	fs.BoolVar(&o.DisableCTags, "disable_ctags", x.DisableCTags, "If set, ctags will not be called.")
+	fs.Int64Var(&o.Epoch, "epoch", o.Epoch, "If !=0, the time stamp of a shard will be set to epoch, otherwise to the current time. Used for testing.")
 }
 
 // Args generates command line arguments for o. It is the "inverse" of Flags.
@@ -477,6 +481,9 @@ func NewBuilder(opts Options) (*Builder, error) {
 	}
 
 	now := time.Now()
+	if opts.Epoch != 0 {
+		now = time.Unix(opts.Epoch, 0)
+	}
 	b.indexTime = now
 	b.id = xid.NewWithTime(now).String()
 
