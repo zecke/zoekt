@@ -1,12 +1,5 @@
 name: sync zoekt
-on:
-  push:
-    branches:
-      - master
-
-  workflow_dispatch:
-    branches: 
-      - master
+on: push
 
 jobs: 
   sync-zoekt:
@@ -37,7 +30,7 @@ jobs:
 
           branch: 'zoekt/update'
           delete-branch: 'true'
-          team-reviewers: 'sourcegraph/search-core'
+          team-reviewers: '@sourcegraph/search-core'
           base: 'main'
     
       - name: 'Check PR outputs'
