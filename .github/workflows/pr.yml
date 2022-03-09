@@ -30,7 +30,7 @@ jobs:
 
           branch: 'zoekt/update'
           delete-branch: 'true'
-          team-reviewers: '@sourcegraph/search-core'
+          team-reviewers: 'search-core'
           base: 'main'
     
       - name: 'Check PR outputs'
