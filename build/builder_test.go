@@ -492,6 +492,8 @@ func TestBuilder_DeltaShardsUpdateVersionsInOlderShards(t *testing.T) {
 
 	createTestShard(t, indexDir, repositoryV1, 2)
 
+	cTagsAvailable := checkCTags() != ""
+
 	repositoryV2 := zoekt.Repository{
 		Name: "repo",
 		ID:   1,
@@ -499,6 +501,7 @@ func TestBuilder_DeltaShardsUpdateVersionsInOlderShards(t *testing.T) {
 			{Name: "main", Version: "v2"},
 			{Name: "release", Version: "v2"},
 		},
+		HasSymbols: cTagsAvailable,
 	}
 
 	shards := createTestShard(t, indexDir, repositoryV2, 1, func(o *Options) {
