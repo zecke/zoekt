@@ -32,11 +32,13 @@ require (
 	github.com/rs/xid v1.3.0
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/sourcegraph/go-ctags v0.0.0-20220210084826-96f4236f0a78
+	github.com/sykesm/zap-logfmt v0.0.4
 	github.com/uber/jaeger-client-go v2.25.0+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible
 	github.com/xanzy/go-gitlab v0.28.0
-	go.uber.org/atomic v1.9.0
+	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/automaxprocs v1.3.0
+	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
 	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c

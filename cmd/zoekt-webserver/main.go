@@ -39,6 +39,7 @@ import (
 	"github.com/google/zoekt"
 	"github.com/google/zoekt/build"
 	"github.com/google/zoekt/debugserver"
+	"github.com/google/zoekt/logging"
 	"github.com/google/zoekt/query"
 	"github.com/google/zoekt/shards"
 	"github.com/google/zoekt/stream"
@@ -47,6 +48,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.uber.org/automaxprocs/maxprocs"
+	"go.uber.org/zap"
 
 	"github.com/uber/jaeger-client-go"
 	jaegercfg "github.com/uber/jaeger-client-go/config"
@@ -54,6 +56,8 @@ import (
 )
 
 const logFormat = "2006-01-02T15-04-05.999999999Z07"
+
+var logger *zap.Logger
 
 func divertLogs(dir string, interval time.Duration) {
 	t := time.NewTicker(interval)
@@ -151,6 +155,7 @@ func main() {
 
 	initializeJaeger()
 	initializeGoogleCloudProfiler()
+	logger = logging.InitializeZapLogfmt()
 
 	if *logDir != "" {
 		if fi, err := os.Lstat(*logDir); err != nil || !fi.IsDir() {
