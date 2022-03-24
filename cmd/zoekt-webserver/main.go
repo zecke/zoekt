@@ -259,7 +259,8 @@ func main() {
 
 	go func() {
 		if debug {
-			log.Printf("listening on %v", *listen)
+			//log.Printf("listening on %v", *listen)
+			logger.Debug("Listening", zap.Stringp("addr", listen))
 		}
 		var err error
 		if *sslCert != "" || *sslKey != "" {
@@ -270,12 +271,14 @@ func main() {
 
 		if err != http.ErrServerClosed {
 			// Fatal otherwise shutdownOnSignal will block
-			log.Fatalf("ListenAndServe: %v", err)
+			//log.Fatalf("ListenAndServe: %v", err)
+			logger.Fatal("ListenAndServe threw an error", zap.Error(err))
 		}
 	}()
 
 	if err := shutdownOnSignal(srv); err != nil {
-		log.Fatalf("http.Server.Shutdown: %v", err)
+		logger.Fatal("http.Server.Shutdown", zap.Error(err))
+		//log.Fatalf("http.Server.Shutdown: %v", err)
 	}
 }
 
@@ -297,7 +300,8 @@ func shutdownOnSignal(srv *http.Server) error {
 		select {
 		case <-ctx.Done():
 		case sig := <-c:
-			log.Printf("received another signal (%v), immediate shutdown", sig)
+			logger.Info("Received another signal, immediate shutdown", zap.String("signal", sig.String()))
+			//log.Printf("received another signal (%v), immediate shutdown", sig)
 			cancel()
 		}
 	}()
@@ -308,7 +312,8 @@ func shutdownOnSignal(srv *http.Server) error {
 	ctx, cancel2 := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel2()
 
-	log.Printf("shutting down")
+	logger.Info("shutting down")
+	//log.Printf("shutting down")
 	return srv.Shutdown(ctx)
 }
 
