@@ -155,7 +155,7 @@ func main() {
 
 	initializeJaeger()
 	initializeGoogleCloudProfiler()
-	logger = logging.InitializeZapLogfmt()
+	logger = logging.InitializeZapLogfmt(logDir)
 
 	if *logDir != "" {
 		if fi, err := os.Lstat(*logDir); err != nil || !fi.IsDir() {
