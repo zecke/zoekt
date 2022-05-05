@@ -1,49 +1,41 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash
 
-set -euxo pipefail 
+set -euxo pipefail
 
-export REPO="${REPO:-"https://github.com/sourcegraph/sourcegraph.git"}"
+export REPO="${REPO:-"https://github.com/sgtest/megarepo.git"}"
 
-export OLD_COMMIT="${OLD_COMMIT:-"e858f4337537604bac0dc30915c674d6b1072ac8"}"
-export NEW_COMMIT="${NEW_COMMIT:-"cc3010911fb4093c71236a78cd72f7767630e92d"}"
+export OLD_COMMIT="${OLD_COMMIT:-"0fd77499c2de329354134657bf53f7a8f4f9323b"}"
+export NEW_COMMIT="${NEW_COMMIT:-"13af2da7b084bf609edfbc85eeda21200784fdf1"}"
 
 OUTPUT=$(mktemp -d -t sgserver_XXXXXXX)
 export OUTPUT
 cleanup() {
-  rm -rf "$OUTPUT"
+	rm -rf "$OUTPUT"
 }
 trap cleanup EXIT
 
 export GIT_DIR="$OUTPUT/.git"
 
+function run_fetch() {
+	git -c "protocol.version=2" fetch --depth=1 "$REPO" "$@"
+}
+export -f run_fetch
+
 function fetch_separate() {
-  git fetch origin "$NEW_COMMIT"
-  git fetch origin "$OLD_COMMIT"
+	run_fetch "$NEW_COMMIT"
+	run_fetch "$OLD_COMMIT"
 }
 export -f fetch_separate
 
 function fetch_together() {
-  git fetch origin "$NEW_COMMIT" "$OLD_COMMIT"
+	run_fetch "$NEW_COMMIT" "$OLD_COMMIT"
 }
 export -f fetch_together
 
-function fetch_separate_depth() {
-    git fetch origin --depth=1 "$NEW_COMMIT"
-    git fetch origin --depth=1 "$OLD_COMMIT"
-}
-export -f fetch_separate_depth
-
-function fetch_together_depth() {
-    git fetch origin --depth=1 "$NEW_COMMIT" "$OLD_COMMIT"
-}
-export -f fetch_together_depth
-
-
 function prepare_repo() {
-  rm -rf "$GIT_DIR" || true 
-  git init
-  git remote add origin "$REPO"
+	rm -rf "$GIT_DIR" || true
+	git init --bare
 }
 export -f prepare_repo
 
-hyperfine --prepare "prepare_repo" "fetch_separate" "fetch_together" "fetch_separate_depth" "fetch_together_depth"
+hyperfine --shell=bash --prepare "prepare_repo" "fetch_separate" "fetch_together"
