@@ -23,6 +23,11 @@ func SetTombstone(shardPath string, repoID uint32) error {
 	return setTombstone(shardPath, repoID, true)
 }
 
+// SetTombstone idempotently sets a tombstone for repoName in .meta.
+func SetFTombstone(shardPath string, repoID uint32, filename []string) error {
+	return setTombstone(shardPath, repoID, true)
+}
+
 // UnsetTombstone idempotently removes a tombstones for reopName in .meta.
 func UnsetTombstone(shardPath string, repoID uint32) error {
 	return setTombstone(shardPath, repoID, false)

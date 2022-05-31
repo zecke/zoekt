@@ -639,6 +639,36 @@ func (b *Builder) Finish() error {
 				return fmt.Errorf("shard %q doesn't contain repository ID %d (%q)", shard, b.opts.RepositoryDescription.ID, b.opts.RepositoryDescription.Name)
 			}
 
+			current := repository.FileTombstones
+			var tombstones []uint32
+			documentNames := zoekt.DocumentNames(shard) // -> [][]byte, closer. Or ideally iterator which can close shard. (docid, []byte). iterator means O(1) allocations.
+			// fileNameContent is a []byte into mmap area.
+			// relativeIndex will do O(paths.length) allocations of uint32
+			// you can just iterate and keep O(1), but likely over engineering then
+			// 
+			// dumb DocumentNames does O(paths.length) allocations, but of variable length strings. So is more costly. Dumb thing is fine, until proven otherwise.
+			for docID, name := range documentNames {
+				if len(current) > 0 && current[0] == docID {
+					// old tombstone
+					tombstones = append(tombstones, current[0])
+					current = current[1:]
+				} else if _, ok := b.opts.changedOrRemovedFiles[name]; ok {
+					// new tombstone
+					tombstones = append(tombstones, docID)
+				}
+			}
+			// now we should have a sorted list of documented ids that are tombstoned.
+
+			docIDiter := zoekt.NewDocIDIter(shard, b.opts.changedOrRemovedFiles )
+			for docIDiter.Next() {
+				
+			}
+
+			tombstones = []uint32 
+			for _, path := range b.opts.changedOrRemovedFiles {
+				tombstones = append(tombstones, uint32(hashPath(path)))
+			}
+
 			if len(b.opts.changedOrRemovedFiles) > 0 && repository.FileTombstones == nil {
 				repository.FileTombstones = make(map[string]struct{}, len(b.opts.changedOrRemovedFiles))
 			}
