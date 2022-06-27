@@ -125,6 +125,9 @@ type Server struct {
 	// IndexDir is the index directory to use.
 	IndexDir string
 
+	// IndexConcurrency is the number of repositories we index at once.
+	IndexConcurrency int
+
 	// Interval is how often we sync with Sourcegraph.
 	Interval time.Duration
 
@@ -341,7 +344,15 @@ func (s *Server) Run() {
 		}
 	}()
 
-	// In the current goroutine process the queue forever.
+	for i := 0; i < s.IndexConcurrency; i++ {
+		go s.processQueue()
+	}
+
+	// block forever
+	select {}
+}
+
+func (s *Server) processQueue() {
 	for {
 		if _, err := os.Stat(filepath.Join(s.IndexDir, pauseFileName)); err == nil {
 			time.Sleep(time.Second)
@@ -740,6 +751,7 @@ func main() {
 	targetSize := flag.Int64("merge_target_size", getEnvWithDefaultInt64("SRC_TARGET_SIZE", 2000), "the target size of compound shards in MiB")
 	maxSize := flag.Int64("merge_max_size", getEnvWithDefaultInt64("SRC_MAX_SIZE", 1800), "the maximum size in MiB a shard can have to be considered for merging")
 	minSize := flag.Int64("merge_min_size", getEnvWithDefaultInt64("SRC_MIN_SIZE", 1800), "the minimum size of a compound shard in MiB")
+	indexConcurrency := flag.Int64("index_concurrency", getEnvWithDefaultInt64("SRC_INDEX_CONCURRENCY", 1), "the number of concurrent index jobs to run.")
 	index := flag.String("index", defaultIndexDir, "set index directory to use")
 	listen := flag.String("listen", ":6072", "listen on this address.")
 	hostname := flag.String("hostname", hostnameBestEffort(), "the name we advertise to Sourcegraph when asking for the list of repositories to index. Can also be set via the NODE_NAME environment variable.")
@@ -841,6 +853,10 @@ func main() {
 		}
 	}
 
+	if *indexConcurrency < 1 {
+		*indexConcurrency = 1
+	}
+
 	cpuCount := int(math.Round(float64(runtime.GOMAXPROCS(0)) * (*cpuFraction)))
 	if cpuCount < 1 {
 		cpuCount = 1
@@ -856,6 +872,8 @@ func main() {
 		MaxSizeBytes:    *maxSize * 1024 * 1024,
 		minSizeBytes:    *minSize * 1024 * 1024,
 		shardMerging:    zoekt.ShardMergingEnabled(),
+
+		IndexConcurrency: int(*indexConcurrency),
 	}
 
 	if *debugList {
