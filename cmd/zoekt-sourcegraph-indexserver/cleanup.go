@@ -379,18 +379,19 @@ func (s *Server) vacuum() {
 				debug.Printf("failed getting all file paths for %s", path)
 				continue
 			}
-			s.muIndexDir.Lock()
-			for _, p := range paths {
-				os.Remove(p)
-			}
-			s.muIndexDir.Unlock()
+			s.muIndexDir.Global(func() {
+				for _, p := range paths {
+					os.Remove(p)
+				}
+			})
 			shardsLog(s.IndexDir, "delete", []shard{{Path: path}})
 			continue
 		}
 
-		s.muIndexDir.Lock()
-		removed, err := removeTombstones(path)
-		s.muIndexDir.Unlock()
+		var removed []*zoekt.Repository
+		s.muIndexDir.Global(func() {
+			removed, err = removeTombstones(path)
+		})
 
 		if err != nil {
 			debug.Printf("error while removing tombstones in %s: %s", fn, err)
