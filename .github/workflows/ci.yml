@@ -41,7 +41,7 @@ jobs:
       uses: docker/build-push-action@v1
       with:
         repository: sourcegraph/zoekt-webserver
-        tags: ${{ steps.version.outputs.value }},latest
+        tags: ${{ steps.version.outputs.value }}
         dockerfile: Dockerfile.webserver
         add_git_labels: "true"
         username: ${{ secrets.DOCKER_USERNAME }}
@@ -51,7 +51,7 @@ jobs:
       uses: docker/build-push-action@v1
       with:
         repository: sourcegraph/zoekt-indexserver
-        tags: ${{ steps.version.outputs.value }},latest
+        tags: ${{ steps.version.outputs.value }}
         dockerfile: Dockerfile.indexserver
         add_git_labels: "true"
         username: ${{ secrets.DOCKER_USERNAME }}
