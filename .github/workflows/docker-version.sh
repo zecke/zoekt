@@ -10,4 +10,4 @@ TZ=UTC git --no-pager show \
   --quiet \
   --abbrev=12 \
   --date='format-local:%Y%m%d%H%M%S' \
-  --format="0.0.0-%cd-%h"
+  --format="sourcegraph-3.36-%cd-%h"
